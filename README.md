@@ -4,6 +4,9 @@ To get your OpenAI API key (or token) for using ChatGPT and other OpenAI models,
 Go to the OpenAI website.
 If you don’t have an account, sign up. If you already have an account, log in.
 2. Navigate to the API Keys Section:
+
+https://platform.openai.com/account/api-keys
+
 After logging in, go to the API keys page (you can also navigate to it from your account dashboard).
 On this page, you can see your existing API keys or generate a new one if needed.
 3. Create a New API Key:
@@ -33,3 +36,6 @@ Write a python script to prompt to scan an IP address of my choosing.
 
 Example prompt:
 Write a python script to execute scan.py with argument set to "x.x.x.x"
+
+Example prompt:
+Create a keyboard logger to save to a filename logs.txt. If the file logs.txt doesn't exist create it and move the old logs.txt if it exists to a logs-[isert date here].txt file. Write this in python.
