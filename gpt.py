@@ -5,9 +5,10 @@ import importlib
 import re
 import time
 
+
 # Set your OpenAI API key here
 openai.api_key = ''
-RETRY_LIMIT = 5  # Limit the number of retries
+RETRY_LIMIT = 100  # Limit the number of retries
 
 def install_module(module_name):
     """
@@ -18,22 +19,17 @@ def install_module(module_name):
         __import__(module_name)
     except ImportError:
         # If the module is not installed, install it via pip
-        if module_name == 'nmap':
-            module_name = 'python-nmap'  # Correct the module name to 'python-nmap'
         print(f"Module '{module_name}' is missing. Installing it...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", module_name])
 
-        # Reload the module after installing it
-        globals()[module_name] = importlib.import_module(module_name)
-
 def ask_chatgpt(prompt):
     response = openai.ChatCompletion.create(
-        model="gpt-4",  # Use "gpt-4" or "gpt-3.5-turbo" based on your needs
+        model="gpt-4",  # Use "gpt-4" or "gpt-3.5-turbo"
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": prompt},
         ],
-        max_tokens=150,  # Adjust this value for the length of the response
+        max_tokens=200,  # Increase max tokens to reduce the chance of code cutting off
         n=1,  # Number of responses to generate
         temperature=0.7,  # Adjust for more/less randomness in responses
     )
@@ -61,10 +57,9 @@ def fix_incomplete_code(code):
     # Attempt to fix incomplete print statements (detects common patterns)
     if "print(f" in code and not code.strip().endswith(")"):
         code += ')  # Auto-fixing incomplete print statement'
-    
     # Fix if __name__ == "__main__": block if it's incomplete
     if "__name__" in code and "__main__" in code and code.strip().endswith(":"):
-        code += '\n    print("Executing main block")'  # Add a basic print statement as a placeholder
+        code += '\n    main()  # Automatically calling main function if missing'
     
     return code
 
@@ -72,13 +67,15 @@ def add_function_call(code):
     """
     Detects and calls any defined function if it hasn't been called.
     """
-    # Find the defined function using a regex search
+    if "__name__" in code and "__main__" in code:
+        # __name__ block is already present, return code as is
+        return code
+
+    # Detect and call the first function found
     function_match = re.search(r'def (\w+)\(.*\):', code)
     if function_match:
         function_name = function_match.group(1)
-        # If the function is defined but not called, append the function call at the end
-        if function_name not in code:
-            code += f'\n\n{function_name}("")  # Automatically calling the function with an IP'
+        code += f'\n\n{function_name}()  # Automatically calling {function_name} function'
     return code
 
 def execute_python_code(code):
@@ -108,6 +105,15 @@ def execute_python_code(code):
         print(f"Error executing code: {e}")
         return False
 
+def handle_ethics_rejection(response):
+    """
+    Detects if the response includes an ethical rejection and stops retrying if so.
+    """
+    if "Sorry" in response and "assist" in response and "illegal" in response:
+        print("ChatGPT has ethically refused this request. Consider rephrasing the prompt.")
+        return True
+    return False
+
 if __name__ == "__main__":
     print("You can now interact with ChatGPT. Type 'exit' to quit.")
     while True:
@@ -115,11 +121,15 @@ if __name__ == "__main__":
         if user_input.lower() == 'exit':
             print("Exiting ChatGPT interaction. Goodbye!")
             break
-        
+
         retry_count = 0
         while retry_count < RETRY_LIMIT:
             response = ask_chatgpt(user_input)
             print("\nChatGPT Response:\n", response)
+
+            # Handle ethical rejection by ChatGPT
+            if handle_ethics_rejection(response):
+                break
 
             # Check if the response contains Python code and attempt to execute it
             if '```python' in response and '```' in response:

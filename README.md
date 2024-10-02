@@ -25,3 +25,11 @@ pip install openai
 #Troubleshooting
 # For windows you must downgrade
 pip install openai==0.28
+
+
+
+Example prompt:
+Write a python script to prompt to scan an IP address of my choosing.
+
+Example prompt:
+Write a python script to execute scan.py with argument set to "x.x.x.x"
